@@ -1,0 +1,69 @@
+body {
+  text-align: center;
+  font-family: 'Verdana';
+}
+
+h2 {
+  font-size: 8vh;
+  font-family: cursive, Textile, 'Comic Sans MS'; 
+}
+
+p > img {
+  max-width: 18px;
+  padding: 0 4px;
+}
+
+.instagrampost {
+  display: block;
+  font-family: 'Verdana';
+  font-size: 2vh;
+  border-color: #eee #ddd #bbb;
+  border-radius: 5px;
+  border-style: solid;
+  border-width: 1px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  margin: 10px auto;
+  padding: 16px 16px 16px 16px;
+  max-width: 90%;
+  background-image: url("http://www.clarkben.com/weddingsocialposts/img/instag_bg.png");
+  background-repeat: repeat;
+}
+
+.twitterpost {
+  display: block;
+  font-family: 'Verdana';
+  font-size: 2vh;
+  border-color: #eee #ddd #bbb;
+  border-radius: 5px;
+  border-style: solid;
+  border-width: 1px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  margin: 10px auto;
+  padding: 16px 16px 16px 16px;
+  max-width: 90%;
+  background-image: url("http://www.clarkben.com/weddingsocialposts/img/tweet_bg.png");
+  background-repeat: repeat;
+}
+
+.instagrampost > span {
+  color: black;
+  display: block;
+}
+
+.instagrampost > a > img {
+  margin-top: 10px;
+}
+
+a {
+  text-decoration: none;
+  color: black;
+}
+
+.media img {
+  max-width:70%;
+  max-height:70%;
+}
+
+.user > a > img {
+  display: none;
+}
