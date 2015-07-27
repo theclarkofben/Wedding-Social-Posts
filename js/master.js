@@ -19,6 +19,113 @@ var combinedPostsTimeStampsAndHTMLStrings = [];
 
 var outputDOMElements = [];
 
+var twitterDone = false;
+var instagramDone = false;
+
+var getItOnThePage = function(posts){
+      var x = posts.length;
+      var n = 0;
+      var element = document.getElementById("weddingposts");
+      var html = '';
+      while(n < x) {
+        html += '<div class="outputdiv">' + outputDOMElements[n] + '</div>';
+        n++;
+      }
+      element.innerHTML = html;
+  };
+
+
+
+var runWhenOthersFinished = function() {
+  if (twitterDone && instagramDone) {
+    // Perform Regex on each Twitter timestamp element string in the global array to save only the timestamp values as strings
+    var aaa = 0;        
+    while (aaa < twitterTimeStamps.length) {
+      twitterTimeStamps[aaa] = twitterTimeStamps[aaa].outerHTML;
+      var regex = /datetime="(.*?)"/gi;
+      var tempAr = [];
+      tempAr = regex.exec(twitterTimeStamps[aaa]);
+      twitterTimeStamps[aaa] = tempAr[1];
+      aaa++;
+    }
+
+    // Convert each Twitter timestamp string in the array to UNIX timestamp numbers, e.g. "2015-06-18T13:59:49+0000" -> 1434635989000
+    // Note - No need to do this for Instagram as they are already UNIX timestamp numbers
+    var eee = 0;
+    while (eee < twitterTimeStamps.length) {
+      twitterTimeStamps[eee] = Date.parse(twitterTimeStamps[eee]);
+      eee++;
+    }
+    // *** The below code up to line 833 has dependencies on handleTweets(arrayTweets) on line 745 and feed.run() on line 404 running and 
+    // completing first before the code below runs. You'll see that sometimes the page loads before the instagram feed.run() managed to 
+    // complete and so the instagram posts dont appear. Do I need to put the below code in a callback or something? ***
+
+    // Put each Instagram timestamp in to a global array that will hold the combined Twitter and Instagram timestamps
+    var sssss = 0;
+    while (sssss < instagramTimeStamps.length) {
+      combinedPostsTimeStamps.push(instagramTimeStamps[sssss]);
+      sssss++;
+    }
+
+    // Put each Twitter timestamp in to a global array that will hold the combined Twitter and Instagram timestamps
+    var kkkkk = 0;
+    while (kkkkk < twitterTimeStamps.length) {
+      combinedPostsTimeStamps.push(twitterTimeStamps[kkkkk]);
+      kkkkk++;
+    }
+
+    // Put each Instagram post HTML string in to a global array that will hold the combined Twitter and Instagram HTML as strings
+    var iiiii = 0;
+    while (iiiii < instagramPostsHTMLStrings.length) {
+      combinedPostsHTMLStrings.push(instagramPostsHTMLStrings[iiiii]);
+      iiiii++;
+    }
+
+    // Put each Twitter post HTML string in to a global array that will hold the combined Twitter and Instagram HTML as strings
+    var ddddd = 0;
+    while (ddddd < twitterPostsHTML.length) {
+      combinedPostsHTMLStrings.push(twitterPostsHTML[ddddd]);
+      ddddd++;
+    }
+
+    // Combined the timestamps and HTML arrays in to objects with properties in another global array
+    var yyyyy = 0;
+    while (yyyyy < combinedPostsTimeStamps.length) {
+      combinedPostsTimeStampsAndHTMLStrings[yyyyy] = {timestamp: combinedPostsTimeStamps[yyyyy], html: combinedPostsHTMLStrings[yyyyy]};
+      yyyyy++;
+    }
+
+    // A function to sort objects in an array by their timestamp properies
+    function compare(a,b) {
+      if (a.timestamp < b.timestamp)
+        return 1;
+      if (a.timestamp > b.timestamp)
+        return -1;
+      return 0;
+    }
+
+    // Sort the combinedPostsTimeStampsAndHTMLStrings global array
+    combinedPostsTimeStampsAndHTMLStrings.sort(compare);
+
+
+    // Convert the HTML strings in the combinedPostsTimeStampsAndHTMLStrings global array in to DOM elements 
+    // and put them in a final global array for output
+    var xxxxx = 0;
+    while (xxxxx < combinedPostsTimeStampsAndHTMLStrings.length) {
+      var parser = new DOMParser();
+      var doc = parser.parseFromString(combinedPostsTimeStampsAndHTMLStrings[xxxxx].html, "text/html");
+      outputDOMElements[xxxxx] = doc.body.innerHTML;
+      xxxxx++;
+    }
+
+    // Run TwitterFetcher but passing in the global array that has both Twitter and Instagram posts that havebeen sorted by timestamp
+    getItOnThePage(outputDOMElements);
+    console.log("I've successfully fired my load");
+  }
+  else {
+    console.log("I've tried to do the final part of the execution but one of the solutions hasn't finished yet");
+  }
+};
 
 
 // ***** INSTAGRAM *****
@@ -178,7 +285,7 @@ var outputDOMElements = [];
               likes: image.likes.count,
               comments: image.comments.count,
               location: this._getObjectProperty(image, 'location.name')
-            });
+            }, runWhenOthersFinished);
             htmlString += imageString;
           }
           tmpEl.innerHTML = htmlString;
@@ -275,7 +382,7 @@ var outputDOMElements = [];
       return "" + (S4()) + (S4()) + (S4()) + (S4());
     };
 
-    Instafeed.prototype._makeTemplate = function(template, data) {
+    Instafeed.prototype._makeTemplate = function(template, data, cb) {
       var output, pattern, varName, varValue, _ref;
       pattern = /(?:\{{2})([\w\[\]\.]+)(?:\}{2})/;
       output = template;
@@ -287,6 +394,8 @@ var outputDOMElements = [];
       // Get the HTML strings that have been generated for each Instagram post using 
       // this _makeTemplate function and put them in the global array instagramPostsHTMLStrings
       instagramPostsHTMLStrings.push(output);
+      cb();
+      instagramDone = true;
       return output;
     };
 
@@ -407,7 +516,7 @@ var feed = new Instafeed({
 },
     template: '<div class="instagrampost"><span>{{model.user.full_name}}</span><p>{{model.caption.text}}</p><span>Posted {{model.created_time}}</span><a href="{{link}}"><img src="{{image}}" /></a></div>'
   });
-  feed.run();
+  feed.run(0, runWhenOthersFinished);
 
 
 
@@ -465,7 +574,7 @@ var feed = new Instafeed({
   var script = null;
   var scriptAdded = false;
 
-  function handleTweets(tweets){
+  function handleTweets(tweets, cb){
     if (customCallbackFunction === null) {
       var x = tweets.length;
       var n = 0;
@@ -479,6 +588,8 @@ var feed = new Instafeed({
         n++;
       }
       element.innerHTML = html;
+      twitterDone = true;
+      cb();
     } else {
       customCallbackFunction(tweets);
     }
@@ -748,94 +859,8 @@ var feed = new Instafeed({
       }
       // Run Twitter Fetcher as normal passing in the Tweets array. Note - you cant disable this from running because its needed as my hack of a 
       // solution gets Tweets inside the handleTweets function and puts them in to a combined Instagram and Twitter array, so you need to run it first
-      handleTweets(arrayTweets);
+      handleTweets(arrayTweets, runWhenOthersFinished);
       inProgress = false;
-
-
-// Perform Regex on each Twitter timestamp element string in the global array to save only the timestamp values as strings
-var aaa = 0;        
-while (aaa < twitterTimeStamps.length) {
-  twitterTimeStamps[aaa] = twitterTimeStamps[aaa].outerHTML;
-  var regex = /datetime="(.*?)"/gi;
-  var tempAr = [];
-  tempAr = regex.exec(twitterTimeStamps[aaa]);
-  twitterTimeStamps[aaa] = tempAr[1];
-  aaa++;
-}
-
-// Convert each Twitter timestamp string in the array to UNIX timestamp numbers, e.g. "2015-06-18T13:59:49+0000" -> 1434635989000
-// Note - No need to do this for Instagram as they are already UNIX timestamp numbers
-var eee = 0;
-while (eee < twitterTimeStamps.length) {
-  twitterTimeStamps[eee] = Date.parse(twitterTimeStamps[eee]);
-  eee++;
-}
-
-
-// *** The below code up to line 833 has dependencies on handleTweets(arrayTweets) on line 745 and feed.run() on line 404 running and 
-// completing first before the code below runs. You'll see that sometimes the page loads before the instagram feed.run() managed to 
-// complete and so the instagram posts dont appear. Do I need to put the below code in a callback or something? ***
-
-// Put each Instagram timestamp in to a global array that will hold the combined Twitter and Instagram timestamps
-var sssss = 0;
-while (sssss < instagramTimeStamps.length) {
-  combinedPostsTimeStamps.push(instagramTimeStamps[sssss]);
-  sssss++;
-}
-
-// Put each Twitter timestamp in to a global array that will hold the combined Twitter and Instagram timestamps
-var kkkkk = 0;
-while (kkkkk < twitterTimeStamps.length) {
-  combinedPostsTimeStamps.push(twitterTimeStamps[kkkkk]);
-  kkkkk++;
-}
-
-// Put each Instagram post HTML string in to a global array that will hold the combined Twitter and Instagram HTML as strings
-var iiiii = 0;
-while (iiiii < instagramPostsHTMLStrings.length) {
-  combinedPostsHTMLStrings.push(instagramPostsHTMLStrings[iiiii]);
-  iiiii++;
-}
-
-// Put each Twitter post HTML string in to a global array that will hold the combined Twitter and Instagram HTML as strings
-var ddddd = 0;
-while (ddddd < twitterPostsHTML.length) {
-  combinedPostsHTMLStrings.push(twitterPostsHTML[ddddd]);
-  ddddd++;
-}
-
-// Combined the timestamps and HTML arrays in to objects with properties in another global array
-var yyyyy = 0;
-while (yyyyy < combinedPostsTimeStamps.length) {
-  combinedPostsTimeStampsAndHTMLStrings[yyyyy] = {timestamp: combinedPostsTimeStamps[yyyyy], html: combinedPostsHTMLStrings[yyyyy]};
-  yyyyy++;
-}
-
-// A function to sort objects in an array by their timestamp properies
-function compare(a,b) {
-  if (a.timestamp < b.timestamp)
-    return 1;
-  if (a.timestamp > b.timestamp)
-    return -1;
-  return 0;
-}
-
-// Sort the combinedPostsTimeStampsAndHTMLStrings global array
-combinedPostsTimeStampsAndHTMLStrings.sort(compare);
-
-
-// Convert the HTML strings in the combinedPostsTimeStampsAndHTMLStrings global array in to DOM elements 
-// and put them in a final global array for output
-var xxxxx = 0;
-while (xxxxx < combinedPostsTimeStampsAndHTMLStrings.length) {
-  var parser = new DOMParser();
-  var doc = parser.parseFromString(combinedPostsTimeStampsAndHTMLStrings[xxxxx].html, "text/html");
-  outputDOMElements[xxxxx] = doc.body.innerHTML;
-  xxxxx++;
-}
-
-// Run TwitterFetcher but passing in the global array that has both Twitter and Instagram posts that havebeen sorted by timestamp
-handleTweets(outputDOMElements);
 
 
       if (queue.length > 0) {
